@@ -12,15 +12,17 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
-    "lint:fix": "oxlint",
+    "lint:fix": "oxlint --fix",
     "preview": "vite preview",
     "test": "vitest run"
   },
   "dependencies": {
+    "es-toolkit": "^1.46.0",
     "konva": "^10.2.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-konva": "^19.2.3"
+    "react-konva": "^19.2.3",
+    "ts-pattern": "^5.9.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
