@@ -4,7 +4,10 @@
   "private": true,
   "description": "SVG Path DevTools",
   "license": "MIT",
-  "author": "Cason Kervis",
+  "author": {
+    "name": "Cason Kervis",
+    "email": "cscnk52@outlook.com"
+  },
   "type": "module",
   "scripts": {
     "build": "vite build",
@@ -19,9 +22,11 @@
   "dependencies": {
     "es-toolkit": "^1.46.0",
     "konva": "^10.2.5",
+    "modern-normalize": "^3.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-konva": "^19.2.3",
+    "svg-pathdata": "^9.0.0",
     "ts-pattern": "^5.9.0"
   },
   "devDependencies": {
@@ -30,11 +35,12 @@
     "@tailwindcss/vite": "^4.2.4",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@vitejs/devtools": "^0.1.15",
     "@vitejs/plugin-react": "^6.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
-    "oxfmt": "^0.46.0",
-    "oxlint": "^1.61.0",
-    "oxlint-tsgolint": "^0.21.1",
+    "oxfmt": "^0.47.0",
+    "oxlint": "^1.62.0",
+    "oxlint-tsgolint": "^0.22.1",
     "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3",
     "vite": "^8.0.10",
