@@ -1,13 +1,32 @@
 import React from "react";
 import { Group, Line } from "react-konva";
 
+export function getGridStep(scale: number): number {
+  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  const targetPx = 50;
+  const rawStep = targetPx / safeScale;
+
+  if (rawStep <= 0) return 1;
+
+  const exponent = Math.floor(Math.log10(rawStep));
+  const magnitude = Math.pow(10, exponent);
+  const normalized = rawStep / magnitude;
+
+  let niceStep: number;
+  if (normalized <= 1) niceStep = 1;
+  else if (normalized <= 2) niceStep = 2;
+  else if (normalized <= 5) niceStep = 5;
+  else niceStep = 10;
+
+  return niceStep * magnitude;
+}
+
 interface GridLayerProps {
   width: number;
   height: number;
   scale: number;
   offsetX?: number;
   offsetY?: number;
-  baseGridSize?: number;
 }
 
 export default function GridLayer({
@@ -16,16 +35,12 @@ export default function GridLayer({
   scale,
   offsetX = 0,
   offsetY = 0,
-  baseGridSize = 50,
 }: GridLayerProps) {
   const lines: React.ReactNode[] = [];
 
   // Adjust world-space spacing so screen-space spacing stays reasonable.
   const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
-  const targetPx = 50;
-  const rawStep = targetPx / safeScale;
-  const power = Math.pow(2, Math.round(Math.log2(rawStep / baseGridSize)));
-  const step = baseGridSize * power;
+  const step = getGridStep(scale);
 
   const left = -offsetX / safeScale;
   const top = -offsetY / safeScale;

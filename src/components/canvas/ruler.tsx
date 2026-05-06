@@ -8,6 +8,7 @@ interface EdgeRulersProps {
   offsetX: number;
   offsetY: number;
   size?: number;
+  gridStep?: number;
 }
 
 interface Tick {
@@ -56,8 +57,14 @@ function formatValue(value: number) {
   return trimNumber(roundedValue.toFixed(3));
 }
 
-function getTicks(startWorld: number, endWorld: number, scale: number, offset: number) {
-  const majorStep = getNiceStep(90 / scale);
+function getTicks(
+  startWorld: number,
+  endWorld: number,
+  scale: number,
+  offset: number,
+  gridStep?: number,
+) {
+  const majorStep = gridStep ?? getNiceStep(90 / scale);
   const minorStep = majorStep / 5;
   const start = Math.floor(startWorld / minorStep) * minorStep;
   const end = Math.ceil(endWorld / minorStep) * minorStep;
@@ -86,6 +93,7 @@ export default function EdgeRulers({
   offsetX,
   offsetY,
   size = 28,
+  gridStep,
 }: EdgeRulersProps) {
   const safeScale = Math.max(scale, 0.000001);
   const rulerStrokeWidth = clamp(0.5, 2, 1 / Math.sqrt(safeScale));
@@ -99,8 +107,8 @@ export default function EdgeRulers({
   const startY = (size - offsetY) / safeScale;
   const endY = (height - offsetY) / safeScale;
 
-  const xTicks = getTicks(startX, endX, safeScale, offsetX);
-  const yTicks = getTicks(startY, endY, safeScale, offsetY);
+  const xTicks = getTicks(startX, endX, safeScale, offsetX, gridStep);
+  const yTicks = getTicks(startY, endY, safeScale, offsetY, gridStep);
 
   const originX = offsetX;
   const originY = offsetY;
