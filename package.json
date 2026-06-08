@@ -28,8 +28,10 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-konva": "^19.2.4",
+    "simple-icons": "^16.23.0",
     "svg-pathdata": "^9.0.0",
-    "ts-pattern": "^5.9.0"
+    "ts-pattern": "^5.9.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",

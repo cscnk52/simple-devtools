@@ -1,2 +1,4 @@
-@import "../node_modules/modern-normalize/modern-normalize.css";
+@import "modern-normalize/modern-normalize.css";
+@source "../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+@import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
