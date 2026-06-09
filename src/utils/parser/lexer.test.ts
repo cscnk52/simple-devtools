@@ -71,8 +71,6 @@ describe("lexer", () => {
   });
 
   it("lexes close path", () => {
-    expect(lexer("Z")).toEqual([
-      { kind: "command", value: "Z" },
-    ]);
+    expect(lexer("Z")).toEqual([{ kind: "command", value: "Z" }]);
   });
 });
