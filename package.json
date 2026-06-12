@@ -20,14 +20,14 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@cloudflare/kumo": "^2.5.1",
+    "@cloudflare/kumo": "^2.5.2",
     "@tanstack/react-router": "^1.170.15",
     "es-toolkit": "^1.47.0",
     "konva": "^10.3.0",
     "modern-normalize": "^3.0.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-konva": "^19.2.4",
+    "react-konva": "^19.2.5",
     "simple-icons": "^16.23.0",
     "svg-pathdata": "^9.0.0",
     "ts-pattern": "^5.9.0",
