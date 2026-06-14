@@ -7,7 +7,7 @@ type Mode = "relative" | "absolute";
 // M x y
 // m x y
 type MoveTo = {
-  kind: "moveTo";
+  type: "moveTo";
   mode: Mode;
   x: number;
   y: number;
@@ -16,7 +16,7 @@ type MoveTo = {
 // L x y
 // l dx dy
 type LineTo = {
-  kind: "lineTo";
+  type: "lineTo";
   mode: Mode;
   x: number;
   y: number;
@@ -25,7 +25,7 @@ type LineTo = {
 // H x
 // h dx
 type HorizontalLineTo = {
-  kind: "horizontalLineTo";
+  type: "horizontalLineTo";
   mode: Mode;
   x: number;
 };
@@ -33,20 +33,20 @@ type HorizontalLineTo = {
 // V y
 // v dy
 type VerticalLineTo = {
-  kind: "verticalLineTo";
+  type: "verticalLineTo";
   mode: Mode;
   y: number;
 };
 
 // Z
 type ClosePath = {
-  kind: "closePath";
+  type: "closePath";
 };
 
 // C x1 y1, x2 y2,x y
 // c dx1 dy1, dx2 dy2, dx dy
 type CurveTo = {
-  kind: "curveTo";
+  type: "curveTo";
   mode: Mode;
   x1: number;
   y1: number;
@@ -59,7 +59,7 @@ type CurveTo = {
 // S x2 y2, x y
 // s dx2 dy2, dx dy
 type SmoothCurveTo = {
-  kind: "smoothCurveTo";
+  type: "smoothCurveTo";
   mode: Mode;
   x2: number;
   y2: number;
@@ -70,7 +70,7 @@ type SmoothCurveTo = {
 // Q x1 y1, x y
 // q dx1 dy1, dx dy
 type QuadraticCurveTo = {
-  kind: "quadraticCurveTo";
+  type: "quadraticCurveTo";
   mode: Mode;
   x1: number;
   y1: number;
@@ -81,7 +81,7 @@ type QuadraticCurveTo = {
 // T x y
 // t dx dy
 type SmoothQuadraticCurveTo = {
-  kind: "smoothQuadraticCurveTo";
+  type: "smoothQuadraticCurveTo";
   mode: Mode;
   x: number;
   y: number;
@@ -90,7 +90,7 @@ type SmoothQuadraticCurveTo = {
 // A rx ry x-axis-rotation large-arc-flag sweep-flag x y
 // a rx ry x-axis-rotation large-arc-flag sweep-flag dx dy
 type EllipticalArcTo = {
-  kind: "ellipticalArcTo";
+  type: "ellipticalArcTo";
   mode: Mode;
   rx: number;
   ry: number;
@@ -160,45 +160,46 @@ export function parse(token: readonly Token[]): Segment[] {
       });
 
     const seg = match(cmd)
-      .with("M", (): Segment => {
+      .returnType<Segment>()
+      .with("M", () => {
         const [x, y] = take(2);
-        return { kind: "moveTo", mode, x, y };
+        return { type: "moveTo", mode, x, y };
       })
-      .with("L", (): Segment => {
+      .with("L", () => {
         const [x, y] = take(2);
-        return { kind: "lineTo", mode, x, y };
+        return { type: "lineTo", mode, x, y };
       })
-      .with("H", (): Segment => {
+      .with("H", () => {
         const [x] = take(1);
-        return { kind: "horizontalLineTo", mode, x };
+        return { type: "horizontalLineTo", mode, x };
       })
-      .with("V", (): Segment => {
+      .with("V", () => {
         const [y] = take(1);
-        return { kind: "verticalLineTo", mode, y };
+        return { type: "verticalLineTo", mode, y };
       })
-      .with("Z", (): Segment => {
-        return { kind: "closePath" };
+      .with("Z", () => {
+        return { type: "closePath" };
       })
-      .with("C", (): Segment => {
+      .with("C", () => {
         const [x1, y1, x2, y2, x, y] = take(6);
-        return { kind: "curveTo", mode, x1, y1, x2, y2, x, y };
+        return { type: "curveTo", mode, x1, y1, x2, y2, x, y };
       })
-      .with("S", (): Segment => {
+      .with("S", () => {
         const [x2, y2, x, y] = take(4);
-        return { kind: "smoothCurveTo", mode, x2, y2, x, y };
+        return { type: "smoothCurveTo", mode, x2, y2, x, y };
       })
-      .with("Q", (): Segment => {
+      .with("Q", () => {
         const [x1, y1, x, y] = take(4);
-        return { kind: "quadraticCurveTo", mode, x1, y1, x, y };
+        return { type: "quadraticCurveTo", mode, x1, y1, x, y };
       })
-      .with("T", (): Segment => {
+      .with("T", () => {
         const [x, y] = take(2);
-        return { kind: "smoothQuadraticCurveTo", mode, x, y };
+        return { type: "smoothQuadraticCurveTo", mode, x, y };
       })
-      .with("A", (): Segment => {
+      .with("A", () => {
         const [rx, ry, xAxisRotation, largeArcFlag, sweepFlag, x, y] = take(7);
         return {
-          kind: "ellipticalArcTo",
+          type: "ellipticalArcTo",
           mode,
           rx,
           ry,

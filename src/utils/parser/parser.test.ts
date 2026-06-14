@@ -12,7 +12,7 @@ describe("parse", () => {
       ]),
     ).toEqual([
       {
-        kind: "moveTo",
+        type: "moveTo",
         mode: "absolute",
         x: 10,
         y: 20,
@@ -29,7 +29,7 @@ describe("parse", () => {
       ]),
     ).toEqual([
       {
-        kind: "moveTo",
+        type: "moveTo",
         mode: "relative",
         x: 10,
         y: 20,
@@ -46,7 +46,7 @@ describe("parse", () => {
       ]),
     ).toEqual([
       {
-        kind: "lineTo",
+        type: "lineTo",
         mode: "absolute",
         x: 30,
         y: 40,
@@ -62,7 +62,7 @@ describe("parse", () => {
       ]),
     ).toEqual([
       {
-        kind: "horizontalLineTo",
+        type: "horizontalLineTo",
         mode: "absolute",
         x: 50,
       },
@@ -77,7 +77,7 @@ describe("parse", () => {
       ]),
     ).toEqual([
       {
-        kind: "verticalLineTo",
+        type: "verticalLineTo",
         mode: "absolute",
         y: 60,
       },
@@ -87,7 +87,7 @@ describe("parse", () => {
   it("parse ClosePath", () => {
     expect(parse([{ kind: "command", value: "Z" }])).toEqual([
       {
-        kind: "closePath",
+        type: "closePath",
       },
     ]);
   });
@@ -105,7 +105,7 @@ describe("parse", () => {
       ]),
     ).toEqual([
       {
-        kind: "curveTo",
+        type: "curveTo",
         mode: "absolute",
         x1: 10,
         y1: 20,
@@ -128,7 +128,7 @@ describe("parse", () => {
       ]),
     ).toEqual([
       {
-        kind: "smoothCurveTo",
+        type: "smoothCurveTo",
         mode: "absolute",
         x2: 30,
         y2: 40,
@@ -149,7 +149,7 @@ describe("parse", () => {
       ]),
     ).toEqual([
       {
-        kind: "quadraticCurveTo",
+        type: "quadraticCurveTo",
         mode: "absolute",
         x1: 10,
         y1: 20,
@@ -168,7 +168,7 @@ describe("parse", () => {
       ]),
     ).toEqual([
       {
-        kind: "smoothQuadraticCurveTo",
+        type: "smoothQuadraticCurveTo",
         mode: "absolute",
         x: 50,
         y: 60,
@@ -190,7 +190,7 @@ describe("parse", () => {
       ]),
     ).toEqual([
       {
-        kind: "ellipticalArcTo",
+        type: "ellipticalArcTo",
         mode: "absolute",
         rx: 25,
         ry: 25,
