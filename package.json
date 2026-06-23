@@ -22,13 +22,14 @@
   "dependencies": {
     "@cloudflare/kumo": "^2.5.2",
     "@tanstack/react-router": "^1.170.16",
-    "es-toolkit": "^1.47.1",
+    "es-toolkit": "^1.48.1",
     "konva": "^10.3.0",
     "modern-normalize": "^3.0.1",
+    "nuqs": "^2.8.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-konva": "^19.2.5",
-    "simple-icons": "^16.23.0",
+    "simple-icons": "^16.24.0",
     "svg-pathdata": "^9.0.0",
     "ts-pattern": "^5.9.0",
     "zod": "^4.4.3"
@@ -53,7 +54,7 @@
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "11.7.0"
+      "version": "11.8.0"
     },
     "runtime": {
       "name": "node",
