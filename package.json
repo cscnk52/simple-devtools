@@ -20,16 +20,16 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@cloudflare/kumo": "^2.5.2",
+    "@cloudflare/kumo": "^2.6.0",
     "@tanstack/react-router": "^1.170.16",
-    "es-toolkit": "^1.48.1",
+    "es-toolkit": "^1.49.0",
     "konva": "^10.3.0",
     "modern-normalize": "^3.0.1",
     "nuqs": "^2.8.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-konva": "^19.2.5",
-    "simple-icons": "^16.24.0",
+    "simple-icons": "^16.24.1",
     "svg-pathdata": "^9.0.0",
     "ts-pattern": "^5.9.0",
     "zod": "^4.4.3"
@@ -37,24 +37,24 @@
   "devDependencies": {
     "@babel/core": "^8.0.1",
     "@rolldown/plugin-babel": "^0.2.3",
-    "@tailwindcss/vite": "^4.3.1",
+    "@tailwindcss/vite": "^4.3.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.2",
+    "@vitejs/plugin-react": "^6.0.3",
     "babel-plugin-react-compiler": "^1.0.0",
     "oxfmt": "^0.56.0",
     "oxlint": "^1.71.0",
     "oxlint-tsgolint": "^0.23.0",
-    "playwright": "^1.61.0",
-    "tailwindcss": "^4.3.1",
+    "playwright": "^1.61.1",
+    "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16",
+    "vite": "^8.1.0",
     "vitest": "^4.1.9"
   },
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "11.8.0"
+      "version": "11.9.0"
     },
     "runtime": {
       "name": "node",
