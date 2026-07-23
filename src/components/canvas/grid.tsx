@@ -1,6 +1,8 @@
 import React from "react";
 import { Group, Line } from "react-konva";
 
+import { GRID_MAJOR, GRID_MINOR, GRID_ORIGIN } from "@/components/colors";
+
 export function getGridStep(scale: number): number {
   const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
   const targetPx = 50;
@@ -71,7 +73,7 @@ export default function GridLayer({
       <Line
         key={`v-${x}`}
         points={[x, top, x, bottom]}
-        stroke={origin ? "#a1a1aa" : major ? "#71717a" : "#3f3f46"}
+        stroke={origin ? GRID_ORIGIN : major ? GRID_MAJOR : GRID_MINOR}
         strokeWidth={origin ? originStrokeWidth : major ? majorStrokeWidth : strokeWidth}
         listening={false}
       />,
@@ -86,7 +88,7 @@ export default function GridLayer({
       <Line
         key={`h-${y}`}
         points={[left, y, right, y]}
-        stroke={origin ? "#a1a1aa" : major ? "#71717a" : "#3f3f46"}
+        stroke={origin ? GRID_ORIGIN : major ? GRID_MAJOR : GRID_MINOR}
         strokeWidth={origin ? originStrokeWidth : major ? majorStrokeWidth : strokeWidth}
         listening={false}
       />,

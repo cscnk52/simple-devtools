@@ -1,124 +1,187 @@
+import { Button, Text, Tooltip } from "@cloudflare/kumo";
+import { CornersOutIcon } from "@phosphor-icons/react";
+import { useAtom, useAtomValue } from "jotai";
 import type Konva from "konva";
-import { useEffect, useRef, useState } from "react";
-import { Stage, Layer, Group } from "react-konva";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Group, Layer, Stage } from "react-konva";
 
-import ControlPoints from "@/components/canvas/ControlPoints";
+import ArcGuides from "@/components/canvas/ArcGuides";
 import Grid, { getGridStep } from "@/components/canvas/grid";
-import PathRenderer from "@/components/canvas/PathRenderer";
+import Handles from "@/components/canvas/Handles";
+import PathShape from "@/components/canvas/PathShape";
 import EdgeRulers from "@/components/canvas/ruler";
-import type { PathCommand } from "@/utils/path";
+import { resolvedAtom, selectedIndexAtom } from "@/state/editor";
+import { bounds, boundsCenter, boundsSize } from "@/utils/geometry";
 
 const SCALE_BY = 1.1;
+const MIN_SCALE = 0.02;
+const MAX_SCALE = 500;
+/** fraction of the viewport a fitted path fills */
+const FIT_MARGIN = 0.8;
+/** the rulers cover this much of the top and left edges */
+const RULER_SIZE = 28;
+/** how far a flattened curve may sit from the true curve, in screen pixels */
+const FLATNESS_PX = 0.25;
 
-function getViewportSize() {
-  return { width: window.innerWidth, height: window.innerHeight };
+interface Transform {
+  scale: number;
+  x: number;
+  y: number;
 }
 
-interface Props {
-  commands: PathCommand[];
-  pathString: string;
+function clampScale(scale: number): number {
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
 }
 
-export default function Canvas({ commands, pathString }: Props) {
+export default function Canvas() {
+  const resolved = useAtomValue(resolvedAtom);
+  const [selectedIndex, setSelectedIndex] = useAtom(selectedIndexAtom);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
-  const isPanningRef = useRef(false);
-  const lastPtrRef = useRef<{ x: number; y: number } | null>(null);
+  const panOriginRef = useRef<{ x: number; y: number } | null>(null);
 
-  const [size, setSize] = useState(getViewportSize);
-  const [tx, setTx] = useState({ scale: 1, x: 0, y: 0 });
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [transform, setTransform] = useState<Transform>({ scale: 8, x: 120, y: 120 });
 
-  /* ---- resize ---- */
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) {
-      const h = () => setSize(getViewportSize());
-      window.addEventListener("resize", h);
-      return () => window.removeEventListener("resize", h);
-    }
-    const upd = () => {
-      const r = el.getBoundingClientRect();
-      setSize({ width: r.width, height: r.height });
+    const element = containerRef.current;
+    if (!element) return;
+
+    const update = () => {
+      const rect = element.getBoundingClientRect();
+      setSize({ width: rect.width, height: rect.height });
     };
-    upd();
-    const ro = new ResizeObserver(upd);
-    ro.observe(el);
-    window.addEventListener("resize", upd);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", upd);
-    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
   }, []);
 
-  /* ---- zoom ---- */
+  /** Centre the path in the viewport at a scale that leaves a small margin. */
+  const fitToView = useCallback(() => {
+    const box = bounds(resolved);
+    if (!box || size.width === 0 || size.height === 0) return;
+
+    const { width, height } = boundsSize(box);
+    const usableWidth = size.width - RULER_SIZE;
+    const usableHeight = size.height - RULER_SIZE;
+
+    // a path with no extent in one axis (a straight line) must not divide by zero
+    const scale = clampScale(
+      Math.min(
+        width > 0 ? (usableWidth * FIT_MARGIN) / width : MAX_SCALE,
+        height > 0 ? (usableHeight * FIT_MARGIN) / height : MAX_SCALE,
+      ),
+    );
+
+    const center = boundsCenter(box);
+    setTransform({
+      scale,
+      x: RULER_SIZE + usableWidth / 2 - center.x * scale,
+      y: RULER_SIZE + usableHeight / 2 - center.y * scale,
+    });
+  }, [resolved, size.width, size.height]);
+
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
-    const st = stageRef.current;
-    if (!st) return;
-    const ptr = st.getPointerPosition();
-    if (!ptr) return;
-    const { scale: os, x, y } = tx;
-    const mp = { x: (ptr.x - x) / os, y: (ptr.y - y) / os };
-    const ns = e.evt.deltaY < 0 ? os * SCALE_BY : os / SCALE_BY;
-    setTx({ scale: ns, x: ptr.x - mp.x * ns, y: ptr.y - mp.y * ns });
+    const pointer = stageRef.current?.getPointerPosition();
+    if (!pointer) return;
+
+    setTransform((previous) => {
+      const next = clampScale(
+        e.evt.deltaY < 0 ? previous.scale * SCALE_BY : previous.scale / SCALE_BY,
+      );
+      // keep the point under the cursor pinned while zooming
+      const worldX = (pointer.x - previous.x) / previous.scale;
+      const worldY = (pointer.y - previous.y) / previous.scale;
+      return { scale: next, x: pointer.x - worldX * next, y: pointer.y - worldY * next };
+    });
   };
 
-  /* ---- pan ---- */
-  const handlePtrDown = (e: Konva.KonvaEventObject<PointerEvent>) => {
-    const st = stageRef.current;
-    if (!st) return;
-    const ptr = st.getPointerPosition();
-    if (!ptr) return;
-    isPanningRef.current = true;
-    lastPtrRef.current = ptr;
-    st.container().style.cursor = "grabbing";
-    e.evt.preventDefault();
-  };
-  const handlePtrMove = () => {
-    if (!isPanningRef.current) return;
-    const st = stageRef.current;
-    if (!st) return;
-    const ptr = st.getPointerPosition();
-    const lp = lastPtrRef.current;
-    if (!ptr || !lp) return;
-    lastPtrRef.current = ptr;
-    setTx((p) => ({ ...p, x: p.x + ptr.x - lp.x, y: p.y + ptr.y - lp.y }));
-  };
-  const handlePtrUp = () => {
-    isPanningRef.current = false;
-    lastPtrRef.current = null;
-    const el = stageRef.current?.container();
-    if (el) el.style.cursor = "default";
+  const handlePointerDown = (e: Konva.KonvaEventObject<PointerEvent>) => {
+    // only empty space pans; anything else is a shape being clicked or dragged
+    if (e.target !== e.target.getStage()) return;
+
+    const pointer = stageRef.current?.getPointerPosition();
+    if (!pointer) return;
+
+    panOriginRef.current = pointer;
+    setSelectedIndex(null);
+    stageRef.current?.container().style.setProperty("cursor", "grabbing");
   };
 
-  const s = Number.isFinite(tx.scale) && tx.scale > 0 ? tx.scale : 1;
-  const gs = getGridStep(s);
-  const sw = 2 / s;
+  const handlePointerMove = () => {
+    const origin = panOriginRef.current;
+    const pointer = stageRef.current?.getPointerPosition();
+    if (!origin || !pointer) return;
+
+    panOriginRef.current = pointer;
+    setTransform((previous) => ({
+      ...previous,
+      x: previous.x + pointer.x - origin.x,
+      y: previous.y + pointer.y - origin.y,
+    }));
+  };
+
+  const endPan = () => {
+    if (!panOriginRef.current) return;
+    panOriginRef.current = null;
+    stageRef.current?.container().style.setProperty("cursor", "default");
+  };
+
+  const { scale } = transform;
+  const empty = resolved.length === 0;
+  // hold the flattening error at a fraction of a screen pixel, so curves gain
+  // vertices as the view zooms in rather than showing the polygon they are
+  const tolerance = FLATNESS_PX / scale;
 
   return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0 overflow-hidden"
-      style={{ background: "#09090b" }}
-    >
+    <div ref={containerRef} className="absolute inset-0 overflow-hidden bg-kumo-canvas">
       <Stage
         ref={stageRef}
         width={size.width}
         height={size.height}
         onWheel={handleWheel}
-        onPointerDown={handlePtrDown}
-        onPointerMove={handlePtrMove}
-        onPointerUp={handlePtrUp}
-        onPointerCancel={handlePtrUp}
-        onPointerLeave={handlePtrUp}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endPan}
+        onPointerCancel={endPan}
+        onPointerLeave={endPan}
       >
         <Layer>
-          <Group x={tx.x} y={tx.y} scaleX={s} scaleY={s}>
-            <Grid width={size.width} height={size.height} scale={s} offsetX={tx.x} offsetY={tx.y} />
+          <Group x={transform.x} y={transform.y} scaleX={scale} scaleY={scale}>
+            <Grid
+              width={size.width}
+              height={size.height}
+              scale={scale}
+              offsetX={transform.x}
+              offsetY={transform.y}
+            />
 
-            <PathRenderer pathString={pathString} strokeWidth={sw} />
+            <ArcGuides
+              resolved={resolved}
+              selectedIndex={selectedIndex}
+              scale={scale}
+              tolerance={tolerance}
+            />
 
-            <ControlPoints pathString={pathString} radius={0.6 / s} strokeWidth={0.5 / s} />
+            <PathShape
+              resolved={resolved}
+              selectedIndex={selectedIndex}
+              strokeWidth={2 / scale}
+              tolerance={tolerance}
+              onSelect={setSelectedIndex}
+            />
+
+            <Handles
+              resolved={resolved}
+              selectedIndex={selectedIndex}
+              scale={scale}
+              offset={{ x: transform.x, y: transform.y }}
+              onSelect={setSelectedIndex}
+            />
           </Group>
         </Layer>
 
@@ -126,41 +189,40 @@ export default function Canvas({ commands, pathString }: Props) {
           <EdgeRulers
             width={size.width}
             height={size.height}
-            scale={s}
-            offsetX={tx.x}
-            offsetY={tx.y}
-            gridStep={gs}
+            scale={scale}
+            offsetX={transform.x}
+            offsetY={transform.y}
+            size={RULER_SIZE}
+            gridStep={getGridStep(scale)}
           />
         </Layer>
       </Stage>
 
-      {!pathString && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <div className="text-zinc-700 text-center">
-            <svg
-              className="w-16 h-16 mx-auto mb-3 opacity-30"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .3 2.7-1.1 2.7H3.9c-1.4 0-2.1-1.7-1.1-2.7L4 15.3"
-              />
-            </svg>
-            <p className="text-sm font-medium">Canvas ready</p>
-            <p className="text-xs mt-1 text-zinc-600">Paste a path in the left panel</p>
-          </div>
-        </div>
-      )}
+      <div className="absolute right-3 bottom-3 flex items-center gap-1.5 rounded-lg bg-kumo-base/80 p-1 pl-2.5 ring ring-kumo-line backdrop-blur">
+        <span className="font-mono text-xs text-kumo-subtle tabular-nums">
+          {Math.round(scale * 100)}%
+        </span>
+        <Tooltip
+          content="Zoom to fit the path"
+          render={
+            <Button
+              size="sm"
+              shape="square"
+              variant="ghost"
+              aria-label="Zoom to fit the path"
+              icon={CornersOutIcon}
+              disabled={empty}
+              onClick={fitToView}
+            />
+          }
+        />
+      </div>
 
-      {pathString && (
-        <div className="absolute bottom-3 right-3 pointer-events-none">
-          <span className="text-[11px] font-mono text-zinc-500 bg-zinc-900/80 px-2 py-1 rounded-md border border-zinc-800">
-            {commands.length} commands
-          </span>
+      {empty && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <Text variant="secondary" size="sm">
+            Paste or build a path in the left panel
+          </Text>
         </div>
       )}
     </div>

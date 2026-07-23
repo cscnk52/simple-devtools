@@ -1,44 +1,50 @@
-import type { PathCommand } from "@/utils/path";
+import { Text } from "@cloudflare/kumo";
+import { PathIcon } from "@phosphor-icons/react";
+import { useAtom, useAtomValue } from "jotai";
+import { useEffect, useRef } from "react";
 
-import CommandItem from "./CommandItem";
+import { segmentsAtom, selectedIndexAtom } from "@/state/editor";
 
-interface Props {
-  commands: PathCommand[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-}
+import CommandRow from "./CommandRow";
 
-export default function CommandList({ commands, selectedId, onSelect }: Props) {
+export default function CommandList() {
+  const segments = useAtomValue(segmentsAtom);
+  const [selectedIndex, setSelectedIndex] = useAtom(selectedIndexAtom);
+
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // selecting a segment on the canvas should reveal it in the list
+  useEffect(() => {
+    if (selectedIndex === null) return;
+    listRef.current
+      ?.querySelector(`[data-index="${selectedIndex}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
+
+  if (segments.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-8 text-center">
+        <PathIcon size={24} className="text-kumo-inactive" />
+        <Text variant="secondary" size="sm">
+          Paste a path above, or add a command below.
+        </Text>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-      {commands.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-32 text-zinc-700 text-xs text-center px-4">
-          <svg
-            className="w-8 h-8 mb-2 opacity-40"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0H3"
-            />
-          </svg>
-          Paste a path to inspect commands
-        </div>
-      ) : (
-        commands.map((cmd, idx) => (
-          <CommandItem
-            key={cmd.id}
-            cmd={cmd}
-            idx={idx}
-            selected={cmd.id === selectedId}
-            onSelect={onSelect}
+    <div ref={listRef} className="flex-1 space-y-px overflow-y-auto p-1.5">
+      {segments.map((segment, index) => (
+        <div key={index} data-index={index}>
+          <CommandRow
+            segment={segment}
+            index={index}
+            total={segments.length}
+            selected={index === selectedIndex}
+            onSelect={setSelectedIndex}
           />
-        ))
-      )}
+        </div>
+      ))}
     </div>
   );
 }

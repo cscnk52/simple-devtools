@@ -1,8 +1,8 @@
 import { match } from "ts-pattern";
 
-import { BaseCommand, CommandValue, Token } from "./lexer";
+import { arity, BaseCommand, CommandValue, Token } from "./lexer";
 
-type Mode = "relative" | "absolute";
+export type Mode = "relative" | "absolute";
 
 // M x y
 // m x y
@@ -110,7 +110,7 @@ export type CurveSegment =
   | SmoothQuadraticCurveTo
   | EllipticalArcTo;
 
-type Segment =
+export type Segment =
   | MoveTo
   | LineTo
   | HorizontalLineTo
@@ -127,93 +127,103 @@ function normalize(v: CommandValue): { cmd: BaseCommand; mode: Mode } {
   return { cmd: upper as BaseCommand, mode: v === upper ? "absolute" : "relative" };
 }
 
-const span: Record<BaseCommand, number> = {
-  A: 8,
-  C: 7,
-  H: 2,
-  L: 3,
-  M: 3,
-  Q: 5,
-  S: 5,
-  T: 3,
-  V: 2,
-  Z: 1,
-};
+function flag(value: number): 0 | 1 {
+  if (value !== 0 && value !== 1) {
+    throw new SyntaxError(`arc flag must be 0 or 1, got ${value}`);
+  }
+  return value;
+}
+
+function toSegment(cmd: BaseCommand, mode: Mode, args: readonly number[]): Segment {
+  return match(cmd)
+    .returnType<Segment>()
+    .with("M", () => {
+      const [x, y] = args;
+      return { type: "moveTo", mode, x, y };
+    })
+    .with("L", () => {
+      const [x, y] = args;
+      return { type: "lineTo", mode, x, y };
+    })
+    .with("H", () => {
+      const [x] = args;
+      return { type: "horizontalLineTo", mode, x };
+    })
+    .with("V", () => {
+      const [y] = args;
+      return { type: "verticalLineTo", mode, y };
+    })
+    .with("Z", () => {
+      return { type: "closePath" };
+    })
+    .with("C", () => {
+      const [x1, y1, x2, y2, x, y] = args;
+      return { type: "curveTo", mode, x1, y1, x2, y2, x, y };
+    })
+    .with("S", () => {
+      const [x2, y2, x, y] = args;
+      return { type: "smoothCurveTo", mode, x2, y2, x, y };
+    })
+    .with("Q", () => {
+      const [x1, y1, x, y] = args;
+      return { type: "quadraticCurveTo", mode, x1, y1, x, y };
+    })
+    .with("T", () => {
+      const [x, y] = args;
+      return { type: "smoothQuadraticCurveTo", mode, x, y };
+    })
+    .with("A", () => {
+      const [rx, ry, xAxisRotation, largeArcFlag, sweepFlag, x, y] = args;
+      return {
+        type: "ellipticalArcTo",
+        mode,
+        rx,
+        ry,
+        xAxisRotation,
+        largeArcFlag: flag(largeArcFlag),
+        sweepFlag: flag(sweepFlag),
+        x,
+        y,
+      };
+    })
+    .exhaustive();
+}
 
 export function parse(token: readonly Token[]): Segment[] {
   const segments: Segment[] = [];
   let i = 0;
+  let prev: BaseCommand | undefined;
+  let mode: Mode = "absolute";
 
   while (i < token.length) {
     const t = token[i];
-    if (t.kind !== "command") {
+    let cmd: BaseCommand;
+
+    if (t.kind === "command") {
+      ({ cmd, mode } = normalize(t.value));
       i++;
-      continue;
+    } else if (prev === undefined) {
+      throw new SyntaxError("path must start with a command");
+    } else if (prev === "Z") {
+      throw new SyntaxError(`"Z" takes no arguments`);
+    } else {
+      // arguments left over after a command repeat it implicitly,
+      // except a moveTo, whose extra pairs are lineTo
+      cmd = prev === "M" ? "L" : prev;
     }
 
-    const { cmd, mode } = normalize(t.value);
+    const count = arity[cmd];
+    const args = Array.from({ length: count }, (_, j) => {
+      const arg = token[i + j];
+      if (arg?.kind !== "number") {
+        throw new SyntaxError(`"${cmd}" expects ${count} arguments`);
+      }
+      return arg.value;
+    });
 
-    const take = (count: number): number[] =>
-      Array.from({ length: count }, (_, j) => {
-        const next = token[i + j + 1];
-        return next?.kind === "number" ? next.value : 0;
-      });
-
-    const seg = match(cmd)
-      .returnType<Segment>()
-      .with("M", () => {
-        const [x, y] = take(2);
-        return { type: "moveTo", mode, x, y };
-      })
-      .with("L", () => {
-        const [x, y] = take(2);
-        return { type: "lineTo", mode, x, y };
-      })
-      .with("H", () => {
-        const [x] = take(1);
-        return { type: "horizontalLineTo", mode, x };
-      })
-      .with("V", () => {
-        const [y] = take(1);
-        return { type: "verticalLineTo", mode, y };
-      })
-      .with("Z", () => {
-        return { type: "closePath" };
-      })
-      .with("C", () => {
-        const [x1, y1, x2, y2, x, y] = take(6);
-        return { type: "curveTo", mode, x1, y1, x2, y2, x, y };
-      })
-      .with("S", () => {
-        const [x2, y2, x, y] = take(4);
-        return { type: "smoothCurveTo", mode, x2, y2, x, y };
-      })
-      .with("Q", () => {
-        const [x1, y1, x, y] = take(4);
-        return { type: "quadraticCurveTo", mode, x1, y1, x, y };
-      })
-      .with("T", () => {
-        const [x, y] = take(2);
-        return { type: "smoothQuadraticCurveTo", mode, x, y };
-      })
-      .with("A", () => {
-        const [rx, ry, xAxisRotation, largeArcFlag, sweepFlag, x, y] = take(7);
-        return {
-          type: "ellipticalArcTo",
-          mode,
-          rx,
-          ry,
-          xAxisRotation,
-          largeArcFlag: largeArcFlag as 0 | 1,
-          sweepFlag: sweepFlag as 0 | 1,
-          x,
-          y,
-        };
-      })
-      .exhaustive();
-
-    segments.push(seg);
-    i += span[cmd];
+    segments.push(toSegment(cmd, mode, args));
+    prev = cmd;
+    i += count;
   }
 
   return segments;

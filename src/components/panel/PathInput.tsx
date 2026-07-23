@@ -1,30 +1,77 @@
-import DEFAULT_SAMPLE from "@/utils/path";
+import { Button, Textarea, Tooltip } from "@cloudflare/kumo";
+import { CopyIcon, FlaskIcon } from "@phosphor-icons/react";
+import { useAtomValue, useSetAtom } from "jotai";
+import { useRef } from "react";
 
-interface Props {
-  value: string;
-  onChange: (d: string) => void;
-}
+import { parseErrorAtom, pathTextAtom, setPathTextAtom } from "@/state/editor";
+import { SAMPLE_PATH } from "@/utils/samples";
 
-export default function PathInput({ value, onChange }: Props) {
+export default function PathInput() {
+  const pathText = useAtomValue(pathTextAtom);
+  const parseError = useAtomValue(parseErrorAtom);
+  const setPathText = useSetAtom(setPathTextAtom);
+
+  /**
+   * A burst of typing is one undo step. The first keystroke after focusing
+   * opens it; the rest amend it.
+   */
+  const firstEdit = useRef(true);
+
   return (
-    <div className="p-3 border-b border-zinc-800">
-      <label className="block text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">
-        SVG Path
-      </label>
-      <textarea
-        className="w-full h-24 rounded-md bg-zinc-950 border border-zinc-700 text-zinc-200 text-xs font-mono placeholder-zinc-600 px-2.5 py-2 resize-none outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20 transition-colors"
-        placeholder={'Paste SVG path d="…"'}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+    <div className="flex flex-col gap-2 border-b border-kumo-hairline p-3">
+      <Textarea
+        label="Path data"
+        size="sm"
+        rows={4}
+        value={pathText}
+        placeholder={'d="M12 2 C6.5 2 2 6.5 2 12…"'}
         spellCheck={false}
+        variant={parseError ? "error" : "default"}
+        error={parseError ?? undefined}
+        className="resize-none font-mono leading-relaxed"
+        onFocus={() => {
+          firstEdit.current = true;
+        }}
+        onChange={(e) => {
+          setPathText(e.target.value, { newStep: firstEdit.current });
+          firstEdit.current = false;
+        }}
       />
-      <button
-        type="button"
-        onClick={() => onChange(DEFAULT_SAMPLE)}
-        className="mt-1.5 text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
-      >
-        Load sample path ↗
-      </button>
+
+      <div className="flex items-center gap-1">
+        <Tooltip
+          content="Load a sample path"
+          render={
+            <Button
+              size="xs"
+              variant="ghost"
+              icon={FlaskIcon}
+              onClick={() => setPathText(SAMPLE_PATH)}
+            />
+          }
+        >
+          Sample
+        </Tooltip>
+
+        <Tooltip
+          content="Copy the path to the clipboard"
+          render={
+            <Button
+              size="xs"
+              variant="ghost"
+              icon={CopyIcon}
+              disabled={pathText === ""}
+              onClick={() => void navigator.clipboard?.writeText(pathText)}
+            />
+          }
+        >
+          Copy
+        </Tooltip>
+
+        <span className="ml-auto font-mono text-xs text-kumo-subtle tabular-nums">
+          {pathText.length} chars
+        </span>
+      </div>
     </div>
   );
 }
