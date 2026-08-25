@@ -11,14 +11,14 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "deploy": "pnpm run build && wrangler deploy",
     "dev": "vite",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "preview": "vite preview",
-    "test": "vitest run",
-    "deploy": "pnpm run build && wrangler deploy"
+    "test": "vitest run"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
