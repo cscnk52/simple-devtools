@@ -16,10 +16,16 @@ export interface FlattenOptions {
    * a little accuracy for a bounded amount of work.
    */
   maxDepth?: number;
+  /**
+   * Sampling cap for arcs and ellipses, mirroring `maxDepth` for curves. Keeps
+   * deep zooms from emitting millions of arc segments.
+   */
+  maxSteps?: number;
 }
 
 const DEFAULT_TOLERANCE = 0.1;
 const DEFAULT_MAX_DEPTH = 12;
+const DEFAULT_MAX_STEPS = 2048;
 
 /**
  * Flatness test for a cubic: the curve is within `tolerance` of its chord when
@@ -160,13 +166,16 @@ export function flattenSegment(
   resolved: ResolvedSegment,
   options: FlattenOptions = {},
 ): number[] | null {
-  const { tolerance = DEFAULT_TOLERANCE, maxDepth = DEFAULT_MAX_DEPTH } = options;
+  const { tolerance = DEFAULT_TOLERANCE, maxDepth = DEFAULT_MAX_DEPTH, maxSteps = DEFAULT_MAX_STEPS } = options;
 
   if (!Number.isFinite(tolerance) || tolerance <= 0) {
     throw new RangeError(`tolerance must be a positive finite number, got ${tolerance}`);
   }
   if (!Number.isInteger(maxDepth) || maxDepth < 0) {
     throw new RangeError(`maxDepth must be a non-negative integer, got ${maxDepth}`);
+  }
+  if (!Number.isInteger(maxSteps) || maxSteps < 0) {
+    throw new RangeError(`maxSteps must be a non-negative integer, got ${maxSteps}`);
   }
 
   const { segment, start, end, subpathStart, controls } = resolved;
@@ -225,7 +234,7 @@ export function flattenSegment(
       if (!arc) return [start.x, start.y, end.x, end.y];
 
       const step = arcAngleStep(Math.max(arc.rx, arc.ry), tolerance);
-      const steps = Math.max(1, Math.ceil(Math.abs(arc.deltaAngle) / step));
+      const steps = Math.min(maxSteps, Math.max(1, Math.ceil(Math.abs(arc.deltaAngle) / step)));
 
       const out = [start.x, start.y];
       for (let i = 1; i <= steps; i++) {
@@ -247,8 +256,12 @@ export function flattenEllipse(
   ry: number,
   rotation: number,
   tolerance: number = DEFAULT_TOLERANCE,
+  maxSteps: number = DEFAULT_MAX_STEPS,
 ): number[] {
-  const steps = Math.max(8, Math.ceil((Math.PI * 2) / arcAngleStep(Math.max(rx, ry), tolerance)));
+  const steps = Math.min(
+    maxSteps,
+    Math.max(8, Math.ceil((Math.PI * 2) / arcAngleStep(Math.max(rx, ry), tolerance))),
+  );
 
   const arc = {
     center,

@@ -14,8 +14,6 @@ import { resolvedAtom, selectedIndexAtom } from "@/state/editor";
 import { bounds, boundsCenter, boundsSize } from "@/utils/geometry";
 
 const SCALE_BY = 1.1;
-const MIN_SCALE = 0.02;
-const MAX_SCALE = 500;
 /** fraction of the viewport a fitted path fills */
 const FIT_MARGIN = 0.8;
 /** the rulers cover this much of the top and left edges */
@@ -27,10 +25,6 @@ interface Transform {
   scale: number;
   x: number;
   y: number;
-}
-
-function clampScale(scale: number): number {
-  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
 }
 
 export default function Canvas() {
@@ -69,11 +63,9 @@ export default function Canvas() {
     const usableHeight = size.height - RULER_SIZE;
 
     // a path with no extent in one axis (a straight line) must not divide by zero
-    const scale = clampScale(
-      Math.min(
-        width > 0 ? (usableWidth * FIT_MARGIN) / width : MAX_SCALE,
-        height > 0 ? (usableHeight * FIT_MARGIN) / height : MAX_SCALE,
-      ),
+    const scale = Math.min(
+      width > 0 ? (usableWidth * FIT_MARGIN) / width : 1,
+      height > 0 ? (usableHeight * FIT_MARGIN) / height : 1,
     );
 
     const center = boundsCenter(box);
@@ -90,9 +82,9 @@ export default function Canvas() {
     if (!pointer) return;
 
     setTransform((previous) => {
-      const next = clampScale(
-        e.evt.deltaY < 0 ? previous.scale * SCALE_BY : previous.scale / SCALE_BY,
-      );
+      const next = e.evt.deltaY < 0 ? previous.scale * SCALE_BY : previous.scale / SCALE_BY;
+      // stop only at the float limits, never at an arbitrary zoom bound
+      if (!Number.isFinite(next) || next <= 0) return previous;
       // keep the point under the cursor pinned while zooming
       const worldX = (pointer.x - previous.x) / previous.scale;
       const worldY = (pointer.y - previous.y) / previous.scale;
