@@ -166,7 +166,11 @@ export function flattenSegment(
   resolved: ResolvedSegment,
   options: FlattenOptions = {},
 ): number[] | null {
-  const { tolerance = DEFAULT_TOLERANCE, maxDepth = DEFAULT_MAX_DEPTH, maxSteps = DEFAULT_MAX_STEPS } = options;
+  const {
+    tolerance = DEFAULT_TOLERANCE,
+    maxDepth = DEFAULT_MAX_DEPTH,
+    maxSteps = DEFAULT_MAX_STEPS,
+  } = options;
 
   if (!Number.isFinite(tolerance) || tolerance <= 0) {
     throw new RangeError(`tolerance must be a positive finite number, got ${tolerance}`);
