@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { parsePath } from "./index";
-import type { Segment } from "./parser";
 import { minify } from "./minify";
+import type { Segment } from "./parser";
 
 const compact = (d: string) => minify(parsePath(d));
 
