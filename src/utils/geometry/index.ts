@@ -10,6 +10,7 @@ export {
   type Tether,
 } from "./handles";
 export { arcAngleStep, flattenEllipse, flattenSegment, type FlattenOptions } from "./flatten";
+export { pathLength, segmentLength } from "./length";
 export { add, distance, isFinitePoint, point, reflect, subtract, type Point } from "./point";
 export {
   endPoint,

@@ -46,15 +46,14 @@ function trimNumber(value: string) {
   return value.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
 }
 
-function formatValue(value: number) {
+function decimalsFor(step: number): number {
+  if (!Number.isFinite(step) || step <= 0) return 0;
+  return Math.max(0, Math.ceil(-Math.log10(step)));
+}
+
+function formatValue(value: number, step: number) {
   const roundedValue = Math.abs(value) < 0.0000001 ? 0 : value;
-  const abs = Math.abs(roundedValue);
-
-  if (abs >= 1000) return Math.round(roundedValue).toString();
-  if (abs >= 100) return trimNumber(roundedValue.toFixed(1));
-  if (abs >= 10) return trimNumber(roundedValue.toFixed(2));
-
-  return trimNumber(roundedValue.toFixed(3));
+  return trimNumber(roundedValue.toFixed(decimalsFor(step)));
 }
 
 function getTicks(
@@ -62,9 +61,8 @@ function getTicks(
   endWorld: number,
   scale: number,
   offset: number,
-  gridStep?: number,
+  majorStep: number,
 ) {
-  const majorStep = gridStep ?? getNiceStep(90 / scale);
   const minorStep = majorStep / 5;
   const start = Math.floor(startWorld / minorStep) * minorStep;
   const end = Math.ceil(endWorld / minorStep) * minorStep;
@@ -107,8 +105,9 @@ export default function EdgeRulers({
   const startY = (size - offsetY) / safeScale;
   const endY = (height - offsetY) / safeScale;
 
-  const xTicks = getTicks(startX, endX, safeScale, offsetX, gridStep);
-  const yTicks = getTicks(startY, endY, safeScale, offsetY, gridStep);
+  const majorStep = gridStep ?? getNiceStep(90 / safeScale);
+  const xTicks = getTicks(startX, endX, safeScale, offsetX, majorStep);
+  const yTicks = getTicks(startY, endY, safeScale, offsetY, majorStep);
 
   const originX = offsetX;
   const originY = offsetY;
@@ -177,7 +176,7 @@ export default function EdgeRulers({
                 <Text
                   x={tick.position + 4}
                   y={4}
-                  text={formatValue(tick.value)}
+                  text={formatValue(tick.value, majorStep)}
                   fill={tick.value === 0 ? ORIGIN : LABEL}
                   fontSize={10}
                   fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
@@ -224,7 +223,7 @@ export default function EdgeRulers({
                 <Text
                   x={4}
                   y={tick.position - 4}
-                  text={formatValue(tick.value)}
+                  text={formatValue(tick.value, majorStep)}
                   fill={tick.value === 0 ? ORIGIN : LABEL}
                   fontSize={10}
                   fontFamily="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"

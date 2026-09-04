@@ -1,6 +1,6 @@
 import { match } from "ts-pattern";
 
-import type { Mode, Segment } from "./parser";
+import type { Segment } from "./parser";
 
 const DEFAULT_PRECISION = 6;
 
@@ -24,42 +24,58 @@ export function formatNumber(value: number, precision: number = DEFAULT_PRECISIO
   return Object.is(rounded, -0) ? "0" : String(rounded);
 }
 
-function letter(base: string, mode: Mode): string {
-  return mode === "relative" ? base.toLowerCase() : base;
+const COMMAND: Record<Segment["type"], string> = {
+  moveTo: "M",
+  lineTo: "L",
+  horizontalLineTo: "H",
+  verticalLineTo: "V",
+  closePath: "Z",
+  curveTo: "C",
+  smoothCurveTo: "S",
+  quadraticCurveTo: "Q",
+  smoothQuadraticCurveTo: "T",
+  ellipticalArcTo: "A",
+};
+
+/** The command letter for a segment, honouring its mode. */
+function letter(segment: Segment): string {
+  const base = COMMAND[segment.type];
+  return "mode" in segment && segment.mode === "relative" ? base.toLowerCase() : base;
 }
 
-/** Serialize one segment. Arguments are space separated, which is always safe to re-lex. */
-export function serializeSegment(segment: Segment, precision?: number): string {
+/**
+ * Serialize only a segment's numeric arguments, space separated, without the
+ * command letter. `closePath` has no arguments and yields an empty string.
+ */
+export function serializeArgs(segment: Segment, precision?: number): string {
   const n = (value: number) => formatNumber(value, precision);
 
   return match(segment)
     .returnType<string>()
-    .with({ type: "closePath" }, () => "Z")
-    .with({ type: "moveTo" }, (s) => `${letter("M", s.mode)}${n(s.x)} ${n(s.y)}`)
-    .with({ type: "lineTo" }, (s) => `${letter("L", s.mode)}${n(s.x)} ${n(s.y)}`)
-    .with({ type: "horizontalLineTo" }, (s) => `${letter("H", s.mode)}${n(s.x)}`)
-    .with({ type: "verticalLineTo" }, (s) => `${letter("V", s.mode)}${n(s.y)}`)
+    .with({ type: "closePath" }, () => "")
+    .with({ type: "moveTo" }, (s) => `${n(s.x)} ${n(s.y)}`)
+    .with({ type: "lineTo" }, (s) => `${n(s.x)} ${n(s.y)}`)
+    .with({ type: "horizontalLineTo" }, (s) => `${n(s.x)}`)
+    .with({ type: "verticalLineTo" }, (s) => `${n(s.y)}`)
     .with(
       { type: "curveTo" },
-      (s) =>
-        `${letter("C", s.mode)}${n(s.x1)} ${n(s.y1)} ${n(s.x2)} ${n(s.y2)} ${n(s.x)} ${n(s.y)}`,
+      (s) => `${n(s.x1)} ${n(s.y1)} ${n(s.x2)} ${n(s.y2)} ${n(s.x)} ${n(s.y)}`,
     )
-    .with(
-      { type: "smoothCurveTo" },
-      (s) => `${letter("S", s.mode)}${n(s.x2)} ${n(s.y2)} ${n(s.x)} ${n(s.y)}`,
-    )
-    .with(
-      { type: "quadraticCurveTo" },
-      (s) => `${letter("Q", s.mode)}${n(s.x1)} ${n(s.y1)} ${n(s.x)} ${n(s.y)}`,
-    )
-    .with({ type: "smoothQuadraticCurveTo" }, (s) => `${letter("T", s.mode)}${n(s.x)} ${n(s.y)}`)
+    .with({ type: "smoothCurveTo" }, (s) => `${n(s.x2)} ${n(s.y2)} ${n(s.x)} ${n(s.y)}`)
+    .with({ type: "quadraticCurveTo" }, (s) => `${n(s.x1)} ${n(s.y1)} ${n(s.x)} ${n(s.y)}`)
+    .with({ type: "smoothQuadraticCurveTo" }, (s) => `${n(s.x)} ${n(s.y)}`)
     .with(
       { type: "ellipticalArcTo" },
       (s) =>
-        `${letter("A", s.mode)}${n(s.rx)} ${n(s.ry)} ${n(s.xAxisRotation)} ` +
-        `${s.largeArcFlag} ${s.sweepFlag} ${n(s.x)} ${n(s.y)}`,
+        `${n(s.rx)} ${n(s.ry)} ${n(s.xAxisRotation)} ${s.largeArcFlag} ${s.sweepFlag} ${n(s.x)} ${n(s.y)}`,
     )
     .exhaustive();
+}
+
+/** Serialize one segment. Arguments are space separated, which is always safe to re-lex. */
+export function serializeSegment(segment: Segment, precision?: number): string {
+  if (segment.type === "closePath") return "Z";
+  return `${letter(segment)}${serializeArgs(segment, precision)}`;
 }
 
 /**

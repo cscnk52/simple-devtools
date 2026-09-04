@@ -3,7 +3,8 @@ import { parse, Segment } from "./parser";
 
 export { arity, lexer, type BaseCommand, type CommandValue, type Token } from "./lexer";
 export { parse, type CurveSegment, type LinearSegment, type Mode, type Segment } from "./parser";
-export { formatNumber, serializePath, serializeSegment } from "./serialize";
+export { formatNumber, serializeArgs, serializePath, serializeSegment } from "./serialize";
+export { minify } from "./minify";
 
 // throws SyntaxError on malformed input
 export function parsePath(d: string): Segment[] {
